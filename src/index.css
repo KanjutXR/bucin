@@ -328,6 +328,19 @@
 .card-body { padding: 21px 24px 20px; }
 .card-meta { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .game-pill { color: hsl(var(--secondary)); display: inline-flex; align-items: center; gap: 6px; font: 500 10px var(--app-font-mono); letter-spacing: .03em; text-transform: uppercase; }
+.game-pill-trend { color: hsl(var(--ring)); }
+
+.trend-tag { display: inline-flex; align-items: center; gap: 3px; margin-left: 7px; padding: 2px 6px; border-radius: 999px; color: hsl(var(--primary-foreground)); background: hsl(var(--ring) / .82); font: 600 8px var(--app-font-mono); letter-spacing: .04em; text-transform: none; vertical-align: middle; }
+
+.category-toggle { display: flex; gap: 8px; margin-bottom: 19px; }
+.category-toggle button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px; padding: 10px 12px; border: 1px solid hsl(var(--input)); border-radius: 8px; background: hsl(var(--background) / .46); color: hsl(var(--muted-foreground)); font: 600 11px var(--app-font-mono); letter-spacing: .02em; transition: color .2s ease, background-color .2s ease, border-color .2s ease; }
+.category-toggle button.active { color: hsl(var(--primary-foreground)); background: hsl(var(--primary)); border-color: hsl(var(--primary)); }
+
+.category-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: -14px 0 24px; }
+.category-tabs button { display: inline-flex; align-items: center; gap: 6px; padding: 8px 13px; border: 1px solid hsl(var(--card-border)); border-radius: 999px; background: hsl(var(--card) / .6); color: hsl(var(--muted-foreground)); font: 600 10px var(--app-font-mono); text-transform: uppercase; letter-spacing: .04em; transition: color .2s ease, background-color .2s ease, border-color .2s ease, transform .2s ease; }
+.category-tabs button:hover { transform: translateY(-1px); color: hsl(var(--foreground)); }
+.category-tabs button.active { color: hsl(var(--primary-foreground)); background: hsl(var(--primary)); border-color: hsl(var(--primary)); }
+.category-tabs button span { opacity: .75; font-weight: 500; }
 .tiny-label { color: hsl(var(--muted-foreground)); font: 500 9px var(--app-font-mono); letter-spacing: .07em; text-transform: uppercase; }
 .card-body h2 { color: hsl(var(--foreground)); font: 600 clamp(28px, 4vw, 39px)/1 var(--app-font-serif); letter-spacing: -.045em; margin: 15px 0 10px; }
 .caption { color: hsl(var(--muted-foreground)); max-width: 550px; font: 400 13px/1.65 var(--app-font-sans); margin: 0; }

@@ -51,6 +51,8 @@ type MemoryMedia = {
   mime?: string;
 };
 
+type MemoryCategory = 'game' | 'trend';
+
 type Memory = {
   id: string;
   title: string;
@@ -60,7 +62,17 @@ type Memory = {
   media: MemoryMedia[];
   art: 'forest' | 'space' | 'cafe' | 'island' | 'cozy';
   savedAt: string;
+  /** 'game' = a co-op gaming session, 'trend' = a photo/video trend we
+   *  recreated together. Older saved memories won't have this field yet —
+   *  always read it through `memoryCategory()` below, never bare. */
+  category?: MemoryCategory;
 };
+
+/** Safe accessor for `category` — memories saved before this field existed
+ *  simply don't have it, and should keep behaving like game memories. */
+function memoryCategory(memory: Memory): MemoryCategory {
+  return memory.category === 'trend' ? 'trend' : 'game';
+}
 
 type MemoryDraft = Omit<Memory, 'id' | 'savedAt'>;
 
@@ -79,6 +91,7 @@ const starterMemories: Memory[] = [
     media: [],
     art: 'forest',
     savedAt: '2023-12-08T23:48:00.000Z',
+    category: 'game',
   },
   {
     id: 'it-takes-two-bridge',
@@ -90,6 +103,7 @@ const starterMemories: Memory[] = [
     media: [],
     art: 'space',
     savedAt: '2024-01-21T22:16:00.000Z',
+    category: 'game',
   },
   {
     id: 'plate-up-midnight',
@@ -101,6 +115,7 @@ const starterMemories: Memory[] = [
     media: [],
     art: 'cafe',
     savedAt: '2024-03-02T00:42:00.000Z',
+    category: 'game',
   },
   {
     id: 'minecraft-lighthouse',
@@ -112,6 +127,7 @@ const starterMemories: Memory[] = [
     media: [],
     art: 'island',
     savedAt: '2024-04-14T21:05:00.000Z',
+    category: 'game',
   },
   {
     id: 'overcooked-kitchen',
@@ -123,6 +139,19 @@ const starterMemories: Memory[] = [
     media: [],
     art: 'cozy',
     savedAt: '2024-06-29T23:11:00.000Z',
+    category: 'game',
+  },
+  {
+    id: 'transition-trend-hallway',
+    title: 'That transition trend, finally',
+    date: '19 Aug 2024',
+    game: 'Couple transition trend',
+    caption:
+      'Filmed it eleven times because someone kept laughing before the beat drop. The blurry one is still the one we posted.',
+    media: [],
+    art: 'space',
+    savedAt: '2024-08-19T20:30:00.000Z',
+    category: 'trend',
   },
 ];
 
@@ -138,10 +167,11 @@ function normalizeMemories(parsed: unknown): Memory[] | null {
   if (!Array.isArray(parsed)) return null;
   // migrate the old `images: string[]` shape into `media: MemoryMedia[]`
   return parsed.map((item: Memory & { images?: string[] }) => {
-    if (Array.isArray(item.media)) return item as Memory;
+    if (Array.isArray(item.media)) return { ...item, category: memoryCategory(item) } as Memory;
     const legacyImages = Array.isArray(item.images) ? item.images : [];
     return {
       ...item,
+      category: memoryCategory(item),
       media: legacyImages.map((dataUrl, index) => ({
         id: `${item.id}-legacy-${index}`,
         kind: 'image' as const,
@@ -480,7 +510,7 @@ function MemoryArtwork({ memory, compact = false }: { memory: Memory; compact?: 
       <span className="art-window" />
       <span className="art-star star-a" />
       <span className="art-star star-b" />
-      <span className="art-sticker">{memory.art === 'space' ? 'CO-OP' : 'PLAY LOG'}</span>
+      <span className="art-sticker">{memoryCategory(memory) === 'trend' ? 'TREND' : memory.art === 'space' ? 'CO-OP' : 'PLAY LOG'}</span>
       <span className="art-caption">{memory.game}</span>
     </div>
   );
@@ -524,6 +554,7 @@ function MemoryModal({
   onSave: (draft: MemoryDraft, id?: string) => void;
 }) {
   const [title, setTitle] = useState(memory?.title ?? '');
+  const [category, setCategory] = useState<MemoryCategory>(memory ? memoryCategory(memory) : 'game');
   const [game, setGame] = useState(memory?.game ?? '');
   const [caption, setCaption] = useState(memory?.caption ?? '');
   const [date, setDate] = useState(memory?.date ?? formatToday());
@@ -566,7 +597,8 @@ function MemoryModal({
     onSave(
       {
         title: title.trim(),
-        game: game.trim() || 'A game we played',
+        category,
+        game: game.trim() || (category === 'trend' ? 'A trend we tried' : 'A game we played'),
         caption: caption.trim(),
         date: date.trim() || formatToday(),
         media,
@@ -587,14 +619,43 @@ function MemoryModal({
           <button className="icon-button" onClick={onClose} aria-label="Close form" data-testid="button-close-memory-form"><X size={18} /></button>
         </div>
         <form onSubmit={submit}>
+          <div className="category-toggle" role="group" aria-label="Jenis kenangan">
+            <button
+              type="button"
+              className={category === 'game' ? 'active' : ''}
+              onClick={() => setCategory('game')}
+              data-testid="button-category-game"
+            >
+              <Gamepad2 size={14} /> Malam main game
+            </button>
+            <button
+              type="button"
+              className={category === 'trend' ? 'active' : ''}
+              onClick={() => setCategory('trend')}
+              data-testid="button-category-trend"
+            >
+              <Sparkles size={14} /> Trend bareng dia
+            </button>
+          </div>
           <div className="form-grid">
             <label className="field field-wide">
               <span>What do we call it?</span>
-              <input autoFocus value={title} onChange={(event) => setTitle(event.target.value)} placeholder="The night we found the lighthouse" data-testid="input-memory-title" />
+              <input
+                autoFocus
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                placeholder={category === 'trend' ? 'That transition trend, finally' : 'The night we found the lighthouse'}
+                data-testid="input-memory-title"
+              />
             </label>
             <label className="field">
-              <span>Game / place</span>
-              <input value={game} onChange={(event) => setGame(event.target.value)} placeholder="Stardew Valley" data-testid="input-memory-game" />
+              <span>{category === 'trend' ? 'Nama trend' : 'Game / place'}</span>
+              <input
+                value={game}
+                onChange={(event) => setGame(event.target.value)}
+                placeholder={category === 'trend' ? 'Couple transition / outfit check / POV trend' : 'Stardew Valley'}
+                data-testid="input-memory-game"
+              />
             </label>
             <label className="field">
               <span>Date</span>
@@ -602,7 +663,13 @@ function MemoryModal({
             </label>
             <label className="field field-wide">
               <span>The caption</span>
-              <textarea value={caption} onChange={(event) => setCaption(event.target.value)} rows={4} placeholder="Tell the tiny story only we would remember..." data-testid="input-memory-caption" />
+              <textarea
+                value={caption}
+                onChange={(event) => setCaption(event.target.value)}
+                rows={4}
+                placeholder={category === 'trend' ? 'How many takes did it take, and who kept messing up the beat?' : 'Tell the tiny story only we would remember...'}
+                data-testid="input-memory-caption"
+              />
             </label>
           </div>
 
@@ -611,7 +678,7 @@ function MemoryModal({
               <div className="upload-icon"><ImagePlus size={17} /></div>
               <div>
                 <strong>Bring the receipts</strong>
-                <p>Drop in up to eight photos or short video clips from this session.</p>
+                <p>Drop in up to eight photos or short video clips — game screenshots, trend recreations, whatever this page is about.</p>
               </div>
             </div>
             <button type="button" className="button button-ghost" onClick={() => inputRef.current?.click()} data-testid="button-upload-memory-images">
@@ -834,6 +901,7 @@ function App() {
   const [modal, setModal] = useState<'add' | 'edit' | null>(null);
   const [notice, setNotice] = useState('');
   const [showAll, setShowAll] = useState(false);
+  const [libraryFilter, setLibraryFilter] = useState<'all' | MemoryCategory>('all');
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
@@ -1088,6 +1156,12 @@ function App() {
 
   const activeMemory = memories[activeIndex];
   const sortedMemories = useMemo(() => [...memories].reverse(), [memories]);
+  const filteredMemories = useMemo(
+    () => sortedMemories.filter((memory) => libraryFilter === 'all' || memoryCategory(memory) === libraryFilter),
+    [sortedMemories, libraryFilter],
+  );
+  const trendCount = useMemo(() => memories.filter((memory) => memoryCategory(memory) === 'trend').length, [memories]);
+  const gameCount = memories.length - trendCount;
 
   const move = (direction: number) => {
     if (!memories.length) return;
@@ -1247,14 +1321,46 @@ function App() {
               </div>
               {isAdmin && <button className="button button-primary" onClick={() => setModal('add')} data-testid="button-add-memory-library"><Plus size={16} /> New page</button>}
             </div>
-            {memories.length === 0 ? <EmptyState onAdd={() => setModal('add')} /> : (
+            {memories.length > 0 && (
+              <div className="category-tabs" role="tablist" aria-label="Filter kenangan">
+                <button type="button" role="tab" aria-selected={libraryFilter === 'all'} className={libraryFilter === 'all' ? 'active' : ''} onClick={() => setLibraryFilter('all')} data-testid="button-filter-all">
+                  Semua <span>{memories.length}</span>
+                </button>
+                <button type="button" role="tab" aria-selected={libraryFilter === 'game'} className={libraryFilter === 'game' ? 'active' : ''} onClick={() => setLibraryFilter('game')} data-testid="button-filter-game">
+                  <Gamepad2 size={13} /> Game <span>{gameCount}</span>
+                </button>
+                <button type="button" role="tab" aria-selected={libraryFilter === 'trend'} className={libraryFilter === 'trend' ? 'active' : ''} onClick={() => setLibraryFilter('trend')} data-testid="button-filter-trend">
+                  <Sparkles size={13} /> Trend kita <span>{trendCount}</span>
+                </button>
+              </div>
+            )}
+            {memories.length === 0 ? (
+              <EmptyState onAdd={() => setModal('add')} />
+            ) : filteredMemories.length === 0 ? (
+              <div className="empty-state" data-testid="empty-filtered-memories">
+                <div className="empty-icon"><Sparkles size={27} /></div>
+                <p className="eyebrow">nothing here yet</p>
+                <h2>Belum ada trend kita di sini.</h2>
+                <p>Punya foto/video trend yang pernah kalian buat bareng? Tuck it in.</p>
+                {isAdmin && (
+                  <button className="button button-primary" onClick={() => setModal('add')} data-testid="button-add-filtered-memory">
+                    <Plus size={16} /> Add a memory
+                  </button>
+                )}
+              </div>
+            ) : (
               <div className="memory-shelf">
-                {sortedMemories.map((memory, index) => (
+                {filteredMemories.map((memory, index) => (
                   <button className="shelf-card" key={memory.id} onClick={() => chooseMemory(memory)} data-testid={`card-memory-${memory.id}`}>
-                    <div className="shelf-number">{String(memories.length - index).padStart(2, '0')}</div>
+                    <div className="shelf-number">{String(filteredMemories.length - index).padStart(2, '0')}</div>
                     <MemoryArtwork memory={memory} compact />
                     <div className="shelf-copy">
-                      <p>{memory.date}</p>
+                      <p>
+                        {memory.date}
+                        {memoryCategory(memory) === 'trend' && (
+                          <span className="trend-tag"><Sparkles size={9} /> trend</span>
+                        )}
+                      </p>
                       <h2>{memory.title}</h2>
                       <span>{memory.game}</span>
                     </div>
@@ -1301,7 +1407,12 @@ function App() {
                     <div className="card-index">NO. {String(activeIndex + 1).padStart(2, '0')}</div>
                   </div>
                   <div className="card-body">
-                    <div className="card-meta"><span className="game-pill"><Gamepad2 size={13} /> {activeMemory.game}</span><span className="tiny-label">a moment worth keeping</span></div>
+                    <div className="card-meta">
+                      <span className={`game-pill ${memoryCategory(activeMemory) === 'trend' ? 'game-pill-trend' : ''}`}>
+                        {memoryCategory(activeMemory) === 'trend' ? <Sparkles size={13} /> : <Gamepad2 size={13} />} {activeMemory.game}
+                      </span>
+                      <span className="tiny-label">{memoryCategory(activeMemory) === 'trend' ? 'a trend we made ours' : 'a moment worth keeping'}</span>
+                    </div>
                     <h2 data-testid={`text-memory-title-${activeMemory.id}`}>{activeMemory.title}</h2>
                     <p className="caption" data-testid={`text-memory-caption-${activeMemory.id}`}>{activeMemory.caption}</p>
                     <div className="card-footer">
