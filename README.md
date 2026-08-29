@@ -79,9 +79,9 @@ seperti biasa. Gambar disimpan di penyimpanan lokal browser admin.
   tersimpan di **Vercel Blob** (database beneran), bukan lagi local storage browser.
   Jadi begitu admin menambah kenangan, siapa pun yang scan QR dari HP mana pun akan
   melihat kenangan yang sama.
-- Foto biasanya aman diunggah, tapi video/lagu yang besar (>4.5MB) bisa gagal diunggah
-  karena batas ukuran request di Vercel (paket Hobby). Kalau ini jadi masalah, kabari
-  saja — bisa diganti ke metode upload langsung-ke-Blob yang tidak kena batas ini.
+- Foto/video/lagu sekarang diunggah langsung dari browser ke Vercel Blob (bukan lewat
+  fungsi server lagi), jadi tidak lagi kena batas ukuran request 4.5MB milik Vercel
+  (paket Hobby). File besar (ratusan MB) sekarang aman diunggah.
 - Musik di pemutar (`MusicPlayer`) untuk saat ini masih tersimpan lokal per-browser,
   belum ikut dipindah ke Blob. Bilang saja kalau mau playlist musiknya juga disamakan
   di semua perangkat.
@@ -97,8 +97,10 @@ seperti biasa. Gambar disimpan di penyimpanan lokal browser admin.
   format base64 dari versi lokal sebelumnya) yang kesimpan kegedean di server. Perbaikannya:
   login admin lalu klik **"reset sample pages"** di menu — ini menimpa data yang rusak
   dengan data kecil yang bersih. Setelah itu upload ulang foto/videonya dari admin.
-- Versi ini juga sudah dibuat lebih ketat: foto/video sekarang hanya boleh disimpan sebagai
-  link Blob, bukan base64 mentah, supaya masalah di atas tidak terulang.
+- Versi ini sudah pindah ke upload langsung-ke-Blob dari browser (lewat
+  `@vercel/blob/client`), jadi error 413 saat *mengunggah* foto/video seharusnya tidak
+  terjadi lagi — `/api/media/upload` sekarang cuma menerbitkan token upload singkat,
+  bukan lagi menerima file itu sendiri.
 - Versi ini juga tidak lagi menimpa (overwrite) file `memories.json`/`doodle.json` yang sama
   berulang kali — sebelumnya itu bisa bikin server sesekali membaca data lama yang sudah
   ke-cache padahal sudah ditimpa data baru. Sekarang tiap simpan menulis file baru dan

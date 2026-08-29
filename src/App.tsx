@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, CSSProperties, FormEvent, MouseEvent, ReactNode, TouchEvent } from 'react';
 import QRCode from 'qrcode';
+import { upload } from '@vercel/blob/client';
 import {
   ArrowLeft,
   ArrowRight,
@@ -202,20 +203,25 @@ function readLegacyLocalDoodle(): string | null {
   }
 }
 
-/** Uploads a file straight to Vercel Blob storage (admin-only endpoint) and
- *  resolves with its public URL. */
+/** Uploads a file straight to Vercel Blob storage from the browser — the
+ *  file bytes go directly to Blob, not through our serverless function, so
+ *  large videos/songs no longer hit Vercel's ~4.5MB function payload limit
+ *  (previously a big clip would fail with FUNCTION_PAYLOAD_TOO_LARGE / 413).
+ *  `/api/media/upload` (admin-only) only hands out the short-lived upload
+ *  token; see that file for details. */
 async function uploadFile(file: File): Promise<string> {
-  const response = await fetch('/api/media/upload', {
-    method: 'POST',
-    headers: {
-      'Content-Type': file.type || 'application/octet-stream',
-      'X-Filename': encodeURIComponent(file.name || 'file'),
-    },
-    body: file,
-  });
-  const data = await response.json();
-  if (!response.ok || !data.ok) throw new Error(data.error || 'Upload failed');
-  return data.url as string;
+  const safeName = (file.name || 'file').replace(/[^a-zA-Z0-9._-]+/g, '-').slice(-80) || 'file';
+  const pathname = `uploads/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`;
+  try {
+    const blob = await upload(pathname, file, {
+      access: 'public',
+      handleUploadUrl: '/api/media/upload',
+      contentType: file.type || 'application/octet-stream',
+    });
+    return blob.url;
+  } catch (error) {
+    throw new Error(error instanceof Error ? error.message : 'Upload failed');
+  }
 }
 
 function downloadMemory(memory: Memory) {
