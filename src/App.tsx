@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { ChangeEvent, CSSProperties, FormEvent, ReactNode, TouchEvent } from 'react';
+import type { ChangeEvent, CSSProperties, FormEvent, MouseEvent, ReactNode, TouchEvent } from 'react';
 import QRCode from 'qrcode';
 import {
   ArrowLeft,
@@ -270,15 +270,141 @@ function SparkleBurst({ trigger }: { trigger: number }) {
   );
 }
 
+const TAP_HEART_GLYPHS = ['❤', '💕', '✨'];
+
+/** Wraps a photo/video so a quick double-tap or double-click pops a big
+ *  heart right where the finger/cursor landed — an Instagram-y little treat. */
+function TapHeartLayer({ children }: { children: ReactNode }) {
+  const lastTapRef = useRef(0);
+  const [hearts, setHearts] = useState<{ id: number; x: number; y: number; glyph: string }[]>([]);
+
+  const handleClick = (event: MouseEvent<HTMLDivElement>) => {
+    const now = Date.now();
+    const isDoubleTap = now - lastTapRef.current < 380;
+    lastTapRef.current = now;
+    if (!isDoubleTap) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const heart = {
+      id: now + Math.random(),
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+      glyph: TAP_HEART_GLYPHS[Math.floor(Math.random() * TAP_HEART_GLYPHS.length)],
+    };
+    setHearts((current) => [...current, heart]);
+    window.setTimeout(() => {
+      setHearts((current) => current.filter((item) => item.id !== heart.id));
+    }, 900);
+  };
+
+  return (
+    <div className="tap-heart-layer" onClick={handleClick} data-testid="layer-tap-heart">
+      {children}
+      {hearts.map((heart) => (
+        <span key={heart.id} className="tap-heart-pop" style={{ left: heart.x, top: heart.y } as CSSProperties} aria-hidden="true">
+          {heart.glyph}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** Gentle mouse-driven 3D tilt for the active memory photo — desktop only
+ *  (touch devices simply never fire mousemove, so nothing extra to guard). */
+function useTilt(maxDeg = 6) {
+  const ref = useRef<HTMLDivElement>(null);
+  const handleMove = (event: MouseEvent<HTMLDivElement>) => {
+    const node = ref.current;
+    if (!node) return;
+    const rect = node.getBoundingClientRect();
+    const px = (event.clientX - rect.left) / rect.width - 0.5;
+    const py = (event.clientY - rect.top) / rect.height - 0.5;
+    node.style.setProperty('--tilt-x', `${(-py * maxDeg).toFixed(2)}deg`);
+    node.style.setProperty('--tilt-y', `${(px * maxDeg).toFixed(2)}deg`);
+  };
+  const handleLeave = () => {
+    const node = ref.current;
+    if (!node) return;
+    node.style.setProperty('--tilt-x', '0deg');
+    node.style.setProperty('--tilt-y', '0deg');
+  };
+  return { ref, handleMove, handleLeave };
+}
+
+const HUG_HEART_COUNT = 26;
+const HUG_GLYPHS = ['🤗', '💞', '❤', '✨'];
+
+/** A one-shot shower of hearts across the whole screen, used for the "kirim
+ *  pelukan" button and for celebrating memory-count milestones. */
+function HugBurst({ trigger }: { trigger: number }) {
+  const hearts = useMemo(() => {
+    if (!trigger) return [];
+    return Array.from({ length: HUG_HEART_COUNT }, (_, i) => ({
+      id: i,
+      left: 2 + Math.random() * 96,
+      size: 14 + Math.random() * 26,
+      duration: 2.4 + Math.random() * 2.2,
+      delay: Math.random() * 0.6,
+      drift: (Math.random() - 0.5) * 90,
+      glyph: HUG_GLYPHS[Math.floor(Math.random() * HUG_GLYPHS.length)],
+    }));
+  }, [trigger]);
+
+  if (!trigger) return null;
+
+  return (
+    <div className="hug-burst" key={trigger} aria-hidden="true">
+      {hearts.map((heart) => (
+        <span
+          key={heart.id}
+          className="hug-burst-heart"
+          style={
+            {
+              left: `${heart.left}%`,
+              fontSize: `${heart.size}px`,
+              animationDuration: `${heart.duration}s`,
+              animationDelay: `${heart.delay}s`,
+              '--drift': `${heart.drift}px`,
+            } as CSSProperties
+          }
+        >
+          {heart.glyph}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+const HUG_MESSAGES = [
+  'Pelukan terkirim! Semoga sampai. 🤗',
+  'Satu pelukan hangat, meluncur ke kamu. 💞',
+  'Peluk jarak jauh, tapi rasanya beneran. 🫂',
+  'Dikirim dengan sayang. Sampai-sampai ya. 💌',
+  'Pelukan darurat terkirim, semoga harimu membaik. 🤍',
+];
+
+const GUEST_CAPTIONS = [
+  'private little archive',
+  'made of inside jokes',
+  'still pressing start together',
+  'a museum of us',
+];
+
 function MemoryMediaView({ item, compact }: { item: MemoryMedia; compact?: boolean }) {
-  const needsBlob = item.kind === 'video' && !compact;
+  // Uploads now live straight on Vercel Blob (item.dataUrl is a real URL) —
+  // that used to be true only for photos, so videos were still being looked
+  // up in this browser's local IndexedDB copy (item.blobId), which no longer
+  // gets written to. That left every uploaded video stuck on a loading
+  // spinner forever. We only fall back to IndexedDB for the rare legacy clip
+  // saved before the cloud migration that truly has no dataUrl yet.
+  const needsBlob = item.kind === 'video' && !compact && !item.dataUrl;
   const blobUrl = useBlobUrl(STORE_MEDIA, needsBlob ? item.blobId : undefined);
+  const videoSrc = item.dataUrl ?? blobUrl ?? undefined;
   const [muted, setMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     if (videoRef.current) videoRef.current.muted = muted;
-  }, [muted, blobUrl]);
+  }, [muted, videoSrc]);
 
   if (item.kind === 'video') {
     if (compact) {
@@ -288,7 +414,7 @@ function MemoryMediaView({ item, compact }: { item: MemoryMedia; compact?: boole
         </div>
       );
     }
-    if (!blobUrl) {
+    if (!videoSrc) {
       return (
         <div className="memory-photo-loading">
           <Loader2 size={18} className="spin" />
@@ -297,7 +423,7 @@ function MemoryMediaView({ item, compact }: { item: MemoryMedia; compact?: boole
     }
     return (
       <div className="memory-video-wrap">
-        <video ref={videoRef} src={blobUrl} autoPlay loop muted={muted} playsInline />
+        <video ref={videoRef} src={videoSrc} autoPlay loop muted={muted} playsInline />
         <button
           type="button"
           className="video-mute-toggle"
@@ -375,10 +501,12 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
 }
 
 function MediaStripThumb({ item }: { item: MemoryMedia }) {
-  const blobUrl = useBlobUrl(STORE_MEDIA, item.kind === 'video' ? item.blobId : undefined);
+  const needsBlob = item.kind === 'video' && !item.dataUrl;
+  const blobUrl = useBlobUrl(STORE_MEDIA, needsBlob ? item.blobId : undefined);
   if (item.kind === 'video') {
-    return blobUrl ? (
-      <video src={blobUrl} muted playsInline />
+    const videoSrc = item.dataUrl ?? blobUrl;
+    return videoSrc ? (
+      <video src={videoSrc} muted playsInline />
     ) : (
       <div className="video-thumb-loading"><Loader2 size={14} className="spin" /></div>
     );
@@ -711,6 +839,9 @@ function App() {
   const [slideDirection, setSlideDirection] = useState<'left' | 'right'>('right');
   const [burstTick, setBurstTick] = useState(0);
   const [showWelcome, setShowWelcome] = useState(false);
+  const [hugTick, setHugTick] = useState(0);
+  const [captionIndex, setCaptionIndex] = useState(0);
+  const tilt = useTilt();
 
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [hasAccess, setHasAccess] = useState(false);
@@ -916,6 +1047,21 @@ function App() {
     return () => window.clearTimeout(timer);
   }, [notice]);
 
+  // rotate the little topbar caption through a few playful lines for guests
+  // (admins keep the plain "admin mode" label so it stays a useful status).
+  useEffect(() => {
+    if (isAdmin) return;
+    const timer = window.setInterval(() => {
+      setCaptionIndex((current) => (current + 1) % GUEST_CAPTIONS.length);
+    }, 6000);
+    return () => window.clearInterval(timer);
+  }, [isAdmin]);
+
+  const sendHug = () => {
+    setHugTick((tick) => tick + 1);
+    setNotice(HUG_MESSAGES[Math.floor(Math.random() * HUG_MESSAGES.length)]);
+  };
+
   // lock page scroll while the mobile nav drawer is open, so the page behind
   // it can't be dragged around and glitch against the fixed drawer.
   useEffect(() => {
@@ -960,7 +1106,13 @@ function App() {
       const next = [...memories, newMemory];
       persistMemories(next);
       setActiveIndex(memories.length);
-      setNotice('A new page has joined the book.');
+      if (next.length > 0 && next.length % 5 === 0) {
+        // little celebration every 5th memory — same heart shower as "kirim pelukan"
+        setHugTick((tick) => tick + 1);
+        setNotice(`🎉 ${next.length} kenangan udah kekumpul! Makin banyak, makin sayang.`);
+      } else {
+        setNotice('A new page has joined the book.');
+      }
     }
     setModal(null);
   };
@@ -1030,7 +1182,10 @@ function App() {
           <span><strong>Kenangan</strong><em>Game Kita</em></span>
         </button>
         <div className="topbar-center">
-          <span className="status-dot" /> {isAdmin ? 'admin mode' : 'private little archive'}
+          <span className="status-dot" />{' '}
+          <span key={isAdmin ? 'admin' : captionIndex} className="topbar-caption">
+            {isAdmin ? 'admin mode' : GUEST_CAPTIONS[captionIndex]}
+          </span>
         </div>
         <div className="topbar-actions">
           <span className="saved-label"><Check size={13} /> saved locally</span>
@@ -1137,8 +1292,10 @@ function App() {
               {activeMemory ? (
                 <article className={`memory-card slide-${slideDirection}`} key={activeMemory.id} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} data-testid={`card-active-memory-${activeMemory.id}`}>
                   <PageMark />
-                  <div className="card-image-wrap">
-                    <MemoryArtwork memory={activeMemory} />
+                  <div className="card-image-wrap tilt-wrap" ref={tilt.ref} onMouseMove={tilt.handleMove} onMouseLeave={tilt.handleLeave}>
+                    <TapHeartLayer>
+                      <MemoryArtwork memory={activeMemory} />
+                    </TapHeartLayer>
                     <SparkleBurst trigger={burstTick} />
                     <div className="date-stamp animate-stamp"><Clock3 size={13} /> {activeMemory.date}</div>
                     <div className="card-index">NO. {String(activeIndex + 1).padStart(2, '0')}</div>
@@ -1161,6 +1318,7 @@ function App() {
               ) : <EmptyState onAdd={() => setModal('add')} />}
 
               <div className="swipe-hint"><ArrowLeft size={14} /> swipe or use the arrows <ArrowRight size={14} /></div>
+              <div className="swipe-hint swipe-hint-secondary"><Heart size={10} /> psst — double-tap the photo for a heart</div>
             </section>
 
             <section className="afterword">
@@ -1192,6 +1350,11 @@ function App() {
       {hasAccess && !checkingAccess && (
         <>
           <MusicPlayer isAdmin={isAdmin} onNotice={setNotice} />
+          <button type="button" className="hug-button" onClick={sendHug} aria-label="Kirim pelukan virtual" data-testid="button-send-hug">
+            <span className="hug-button-icon" aria-hidden="true">🤗</span>
+            <span className="hug-button-label">kirim pelukan</span>
+          </button>
+          <HugBurst trigger={hugTick} />
           {showWelcome && <WelcomeOverlay onDismiss={() => setShowWelcome(false)} />}
         </>
       )}

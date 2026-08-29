@@ -382,6 +382,14 @@ export function MusicPlayer({ isAdmin, onNotice }: { isAdmin: boolean; onNotice:
         </div>
       )}
 
+      {isPlaying && (
+        <div className="music-notes" aria-hidden="true">
+          <span>♪</span>
+          <span>♫</span>
+          <span>♩</span>
+        </div>
+      )}
+
       <button
         type="button"
         className={`music-toggle ${isPlaying ? 'playing' : ''}`}

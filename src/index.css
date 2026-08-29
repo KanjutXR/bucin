@@ -204,6 +204,8 @@
 .brand strong { font: 700 18px/1 var(--app-font-serif); letter-spacing: -.03em; }
 .brand em { color: hsl(var(--muted-foreground)); font: 500 9px/1 var(--app-font-mono); letter-spacing: .14em; text-transform: uppercase; font-style: normal; }
 .topbar-center { color: hsl(var(--muted-foreground)); font: 500 10px var(--app-font-mono); letter-spacing: .1em; text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
+.topbar-caption { display: inline-block; animation: caption-fade .6s ease; }
+@keyframes caption-fade { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: translateY(0); } }
 .status-dot { width: 7px; height: 7px; background: hsl(var(--secondary)); border-radius: 50%; box-shadow: 0 0 0 4px hsl(var(--secondary) / .13); }
 .topbar-actions { display: flex; align-items: center; gap: 18px; }
 .saved-label { display: flex; align-items: center; gap: 5px; color: hsl(var(--muted-foreground)); font-size: 11px; }
@@ -305,6 +307,18 @@
 .memory-card { background: hsl(var(--card)); border: 1px solid hsl(var(--card-border)); border-radius: 13px; overflow: visible; position: relative; box-shadow: var(--shadow-card); transform: rotate(-.45deg); transition: transform .35s ease, box-shadow .35s ease; }
 .memory-card:hover { transform: rotate(0deg) translateY(-3px); box-shadow: 0 11px 0 hsl(var(--foreground) / .1), 0 25px 48px hsl(var(--foreground) / .15); }
 .card-image-wrap { padding: 15px 15px 0; position: relative; }
+.tilt-wrap { transform: perspective(900px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg)); transition: transform .25s ease; will-change: transform; }
+.tap-heart-layer { position: relative; }
+.tap-heart-pop {
+  position: absolute; z-index: 7; pointer-events: none; transform: translate(-50%, -50%);
+  font-size: 46px; line-height: 1; animation: tap-heart-pop .85s cubic-bezier(.2,.9,.3,1) forwards;
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,.25));
+}
+@keyframes tap-heart-pop {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.3) rotate(-8deg); }
+  35% { opacity: 1; transform: translate(-50%, -50%) scale(1.15) rotate(6deg); }
+  100% { opacity: 0; transform: translate(-50%, -65%) scale(1) rotate(0deg); }
+}
 .memory-art, .memory-photo { height: 338px; overflow: hidden; border-radius: 7px; position: relative; background: var(--art-bg); }
 .memory-photo img { width: 100%; height: 100%; display: block; object-fit: cover; }
 .memory-photo::after { content: ''; position: absolute; inset: 0; box-shadow: inset 0 0 0 1px rgba(255,255,255,.18), inset 0 -50px 55px rgba(20, 20, 35, .18); pointer-events: none; }
@@ -324,6 +338,8 @@
 .text-button:hover { color: hsl(var(--primary)); }
 .text-button.danger:hover { color: hsl(var(--destructive)); }
 .swipe-hint { margin: 23px 0 0; display: flex; align-items: center; justify-content: center; gap: 9px; color: hsl(var(--muted-foreground)); font: 500 9px var(--app-font-mono); letter-spacing: .08em; text-transform: uppercase; }
+.swipe-hint-secondary { margin-top: 7px; opacity: .68; font-size: 8px; color: hsl(var(--primary)); }
+.swipe-hint-secondary svg { color: hsl(var(--primary)); }
 
 /* illustration layers */
 .memory-art { isolation: isolate; }
@@ -379,6 +395,43 @@
 .download-button { position: fixed; right: 24px; bottom: 22px; display: flex; align-items: center; gap: 7px; border: 1px solid hsl(var(--border)); border-radius: 8px; padding: 10px 13px; color: hsl(var(--muted-foreground)); background: hsl(var(--card) / .88); box-shadow: var(--shadow-soft); font: 500 10px var(--app-font-mono); z-index: 8; transition: transform .2s ease, color .2s ease; }
 .download-button:hover { transform: translateY(-2px); color: hsl(var(--primary)); }
 .toast-note { position: fixed; right: 24px; bottom: 73px; z-index: 30; display: flex; align-items: center; gap: 8px; color: hsl(var(--secondary-foreground)); background: hsl(var(--secondary)); border-radius: 8px; padding: 11px 15px; box-shadow: var(--shadow-soft); font-size: 11px; }
+
+/* ===================================================================== */
+/* "Kirim pelukan" — a playful floating button + full-screen heart shower */
+/* ===================================================================== */
+.hug-button {
+  position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);
+  z-index: 21; display: flex; align-items: center; gap: 7px;
+  border: 1px solid hsl(var(--border)); border-radius: 999px;
+  padding: 10px 16px; color: hsl(var(--primary));
+  background: hsl(var(--card) / .92); backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-soft); font: 700 10px var(--app-font-mono);
+  text-transform: uppercase; letter-spacing: .05em;
+  transition: transform .25s cubic-bezier(.34,1.56,.64,1), box-shadow .2s ease;
+}
+.hug-button:hover { transform: translateX(-50%) translateY(-3px) scale(1.04); box-shadow: 0 14px 30px hsl(var(--primary) / .25); }
+.hug-button:active { transform: translateX(-50%) scale(.94); }
+.hug-button-icon { font-size: 15px; display: inline-block; animation: hug-wiggle 2.2s ease-in-out infinite; }
+@keyframes hug-wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-14deg); }
+  75% { transform: rotate(14deg); }
+}
+.hug-burst { position: fixed; inset: 0; z-index: 55; pointer-events: none; overflow: hidden; }
+.hug-burst-heart {
+  position: absolute; bottom: -8%; line-height: 1;
+  animation-name: hug-heart-rise; animation-timing-function: ease-out; animation-fill-mode: forwards;
+  filter: drop-shadow(0 3px 8px rgba(0,0,0,.2));
+}
+@keyframes hug-heart-rise {
+  0% { transform: translate(0, 0) scale(.5) rotate(0deg); opacity: 0; }
+  15% { opacity: 1; }
+  100% { transform: translate(var(--drift), -108vh) scale(1.15) rotate(20deg); opacity: 0; }
+}
+@media (max-width: 720px) {
+  .hug-button-label { display: none; }
+  .hug-button { padding: 11px; bottom: 16px; }
+}
 
 /* library */
 .library-view { min-height: 620px; }
@@ -452,6 +505,7 @@
   .intro-doodle { margin-right: 0; }
   .topbar-center { display: none; }
   .memory-art, .memory-photo { height: 310px; }
+  .tilt-wrap { transform: none !important; }
 }
 @media (max-width: 720px) {
   .topbar { height: 66px; padding: 0 17px; }
@@ -604,15 +658,20 @@
 .welcome-card { position: relative; z-index: 2; width: min(100%, 420px); text-align: center; padding: 38px 30px 32px; border-radius: 20px; background: hsl(var(--card)); box-shadow: 0 30px 80px rgba(0,0,0,.4); }
 .welcome-icon {
   width: 58px; height: 58px; margin: 0 auto 14px; display: grid; place-items: center;
+  border: 0; padding: 0; cursor: pointer;
   color: hsl(var(--primary-foreground)); background: hsl(var(--primary)); border-radius: 50%;
   animation: welcome-pulse 1.6s ease-in-out infinite;
+  transition: transform .15s cubic-bezier(.34,1.56,.64,1);
 }
+.welcome-icon:hover { animation-play-state: paused; transform: scale(1.08); }
+.welcome-icon:active { animation-play-state: paused; transform: scale(.88); }
 @keyframes welcome-pulse {
   0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 hsl(var(--primary) / .45); }
   50% { transform: scale(1.08); box-shadow: 0 0 0 14px hsl(var(--primary) / 0); }
 }
 .welcome-card h1 { margin: 6px 0 0; font: 700 34px var(--app-font-serif); color: hsl(var(--foreground)); letter-spacing: -.03em; }
 .welcome-copy { margin: 12px 0 0; color: hsl(var(--muted-foreground)); font-size: 13px; line-height: 1.6; }
+.welcome-tap-note { margin: 12px 0 0; color: hsl(var(--primary)); font: 600 11px var(--app-font-mono); }
 .welcome-button { margin-top: 24px; width: 100%; }
 
 /* ===================================================================== */
@@ -689,6 +748,16 @@
 }
 .music-toggle:hover { transform: translateY(-2px) scale(1.04); }
 .music-toggle.playing { animation: music-toggle-pulse 1.6s ease-in-out infinite; }
+.music-notes { position: absolute; right: 2px; bottom: 44px; width: 30px; height: 30px; pointer-events: none; }
+.music-notes span { position: absolute; bottom: 0; color: hsl(var(--primary)); font-size: 13px; opacity: 0; animation: note-float 2.4s ease-in infinite; }
+.music-notes span:nth-child(1) { left: -4px; animation-delay: 0s; }
+.music-notes span:nth-child(2) { left: 10px; font-size: 11px; animation-delay: .5s; }
+.music-notes span:nth-child(3) { left: 3px; font-size: 15px; animation-delay: 1s; }
+@keyframes note-float {
+  0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+  15% { opacity: 1; }
+  100% { transform: translateY(-46px) rotate(14deg); opacity: 0; }
+}
 @keyframes music-toggle-pulse {
   0%, 100% { box-shadow: 0 0 0 0 hsl(var(--primary) / .5), var(--shadow-soft); }
   50% { box-shadow: 0 0 0 9px hsl(var(--primary) / 0), var(--shadow-soft); }
