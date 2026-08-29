@@ -1259,7 +1259,7 @@ function App() {
       <header className="topbar">
         <button className="brand" onClick={() => { setShowAll(false); setActiveIndex(0); }} data-testid="button-home">
           <span className="brand-mark"><Gamepad2 size={20} /></span>
-          <span><strong>Kenangan</strong><em>Game Kita</em></span>
+          <span><strong>Memory</strong><em>Kita Berdua</em></span>
         </button>
         <div className="topbar-center">
           <span className="status-dot" />{' '}
@@ -1291,9 +1291,9 @@ function App() {
         </nav>
         <div className="rail-bottom">
           <div className="couple-note">
-            <div className="mini-avatar avatar-one">A</div>
-            <div className="mini-avatar avatar-two">R</div>
-            <div><strong>A + R</strong><small>still pressing start</small></div>
+            <div className="mini-avatar avatar-one">B</div>
+            <div className="mini-avatar avatar-two">F</div>
+            <div><strong>B + F</strong><small>still pressing start</small></div>
           </div>
           {isAdmin ? (
             <>
@@ -1382,7 +1382,7 @@ function App() {
               <div className="intro-copy">
                 <p className="eyebrow">a scrapbook for the in-between</p>
                 <h1>Some nights<br />deserve a <i>save point.</i></h1>
-                <p className="intro-subtitle">For the screenshots, the side quests, and the “one more round” that quietly became 2am.</p>
+                <p className="intro-subtitle">One more game, one more laugh, and somehow I just want every night to be with you.</p>
               </div>
               <IntroDoodle image={doodleImage} isAdmin={isAdmin} onUpload={handleDoodleUpload} onRemove={handleDoodleRemove} />
             </section>
